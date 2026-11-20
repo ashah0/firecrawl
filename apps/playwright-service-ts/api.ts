@@ -1,4 +1,5 @@
-import express, { Request, Response } from 'express';
+import crypto from 'crypto';
+import express, { Request, Response, NextFunction } from 'express';
 import {
   chromium,
   Browser,
@@ -19,6 +20,24 @@ const app = express();
 const port = process.env.PORT || 3003;
 
 app.use(express.json());
+
+const API_KEY = (process.env.API_KEY || '').trim();
+
+app.get('/health', (_req: Request, res: Response) => {
+  res.json({ ok: true });
+});
+
+app.use((req: Request, res: Response, next: NextFunction) => {
+  if (!API_KEY) return next();
+  const header = req.headers.authorization || '';
+  const expected = `Bearer ${API_KEY}`;
+  const a = Buffer.from(header);
+  const b = Buffer.from(expected);
+  if (a.length !== b.length || !crypto.timingSafeEqual(a, b)) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
+  return next();
+});
 
 const BLOCK_MEDIA =
   (process.env.BLOCK_MEDIA || 'False').toUpperCase() === 'TRUE';
