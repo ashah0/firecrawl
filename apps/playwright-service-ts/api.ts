@@ -21,14 +21,16 @@ const port = process.env.PORT || 3003;
 
 app.use(express.json());
 
-const API_KEY = (process.env.API_KEY || '').trim();
+const API_KEY = (process.env.API_KEY || process.env.FIRECRAWL_API_KEY || '').trim();
 
 app.get('/health', (_req: Request, res: Response) => {
-  res.json({ ok: true });
+  res.json({ ok: true, authConfigured: Boolean(API_KEY) });
 });
 
 app.use((req: Request, res: Response, next: NextFunction) => {
-  if (!API_KEY) return next();
+  if (!API_KEY) {
+    return res.status(503).json({ error: 'Server auth misconfigured (API_KEY unset)' });
+  }
   const header = req.headers.authorization || '';
   const expected = `Bearer ${API_KEY}`;
   const a = Buffer.from(header);
